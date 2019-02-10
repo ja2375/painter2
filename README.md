@@ -13,7 +13,7 @@ The widget supports:
 
 ## Installation
 
-In your `pubspec.yaml` file within your Flutter Project: 
+In your `pubspec.yaml` file within your Flutter Project:
 
 ```yaml
 dependencies:
