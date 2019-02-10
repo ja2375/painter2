@@ -1,4 +1,4 @@
-# painter
+# painter2
 
 A simple flutter widget to paint with your fingers.
 
@@ -9,13 +9,40 @@ The widget supports:
 - Changing the thickness of lines you draw
 - Exporting your painting as png
 - Undo/Redo drawing a line
-- Clearing the hole drawing
+- Clear the whole drawing
 
-## Some Notes
+## Installation
 
-- After calling 'finish()' on a PainterController you can't draw on this painting any more
-- To create a new painting after finishing the old one simply create a new PainterController
-- Calling 'finish()' for the first time will render the drawing. Successive calls will then return a cached version of the rendered picture 
+In your `pubspec.yaml` file within your Flutter Project: 
+
+```yaml
+dependencies:
+  painter2: ^0.0.1
+```
+
+Then import it:
+
+```dart
+import 'package:painter2/painter2.dart';
+```
+
+## Use it
+
+In order to use this plugin, first create a controller:
+
+```dart
+PainterController controller = PainterController();
+controller.thickness = 5.0;
+controller.backgroundColor = Colors.green;
+```
+
+That controller will handle all properties of your drawing space.
+
+Then, to display the painting area, create an inline `Painter` object and give it a reference to your previously created controller:
+
+```dart
+Painter(controller)
+```
 
 ## Example
 
