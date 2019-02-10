@@ -1,4 +1,4 @@
-# painter
+# painter2
 
 A simple flutter widget to paint with your fingers.
 
@@ -9,7 +9,16 @@ The widget supports:
 - Changing the thickness of lines you draw
 - Exporting your painting as png
 - Undo/Redo drawing a line
-- Clearing the hole drawing
+- Clear the whole drawing
+
+## Installation
+
+In your `pubspec.yaml` file within your Flutter Project: 
+
+```yaml
+dependencies:
+  painter2: ^0.0.1
+```
 
 ## Some Notes
 
