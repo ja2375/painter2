@@ -35,22 +35,23 @@ class _ExamplePageState extends State<ExamplePage> {
     PainterController controller = PainterController();
     controller.thickness = 5.0;
     controller.backgroundColor = Colors.green;
-    controller.backgroundImage = Image.network('https://cdn-images-1.medium.com/max/1200/1*5-aoK8IBmXve5whBQM90GA.png');
+    controller.backgroundImage = Image.network(
+        'https://cdn-images-1.medium.com/max/1200/1*5-aoK8IBmXve5whBQM90GA.png');
     return controller;
   }
 
   @override
   Widget build(BuildContext context) {
     List<Widget> actions;
-    if(_finished){
+    if (_finished) {
       actions = <Widget>[
         IconButton(
           icon: Icon(Icons.content_copy),
           tooltip: 'New Painting',
           onPressed: () => setState(() {
-            _finished = false;
-            _controller = newController();
-          }),
+                _finished = false;
+                _controller = newController();
+              }),
         ),
       ];
     } else {
@@ -59,16 +60,14 @@ class _ExamplePageState extends State<ExamplePage> {
           icon: Icon(Icons.undo),
           tooltip: 'Undo',
           onPressed: () {
-            if(_controller.canUndo)
-              _controller.undo();
+            if (_controller.canUndo) _controller.undo();
           },
         ),
         IconButton(
           icon: Icon(Icons.redo),
           tooltip: 'Redo',
           onPressed: () {
-            if(_controller.canRedo)
-              _controller.redo();
+            if (_controller.canRedo) _controller.redo();
           },
         ),
         IconButton(
@@ -83,20 +82,18 @@ class _ExamplePageState extends State<ExamplePage> {
                 _finished = true;
               });
               Uint8List bytes = await _controller.exportAsPNGBytes();
-              Navigator.of(context).push(
-                  MaterialPageRoute(builder: (BuildContext context){
-                    return Scaffold(
-                      appBar: AppBar(
-                        title: Text('View your image'),
-                      ),
-                      body: Container(
-                        child: Image.memory(bytes),
-                      ),
-                    );
-                  })
-              );
-            }
-        ),
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (BuildContext context) {
+                return Scaffold(
+                  appBar: AppBar(
+                    title: Text('View your image'),
+                  ),
+                  body: Container(
+                    child: Image.memory(bytes),
+                  ),
+                );
+              }));
+            }),
       ];
     }
     return Scaffold(
@@ -106,20 +103,14 @@ class _ExamplePageState extends State<ExamplePage> {
           bottom: PreferredSize(
             child: DrawBar(_controller),
             preferredSize: Size(MediaQuery.of(context).size.width, 30.0),
-          )
-      ),
+          )),
       body: Center(
-          child: AspectRatio(
-              aspectRatio: 1.0,
-              child: Painter(_controller)
-          )
-      ),
+          child: AspectRatio(aspectRatio: 1.0, child: Painter(_controller))),
     );
   }
 }
 
 class DrawBar extends StatelessWidget {
-
   final PainterController _controller;
 
   DrawBar(this._controller);
@@ -129,32 +120,27 @@ class DrawBar extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        Flexible(
-            child: StatefulBuilder(
-                builder: (BuildContext context,StateSetter setState){
-                  return Container(
-                      child: Slider(
-                        value: _controller.thickness,
-                        onChanged: (value) => setState((){
-                          _controller.thickness = value;
-                        }),
-                        min: 1.0,
-                        max: 20.0,
-                        activeColor: Colors.white,
-                      )
-                  );
-                }
-            )
-        ),
-        ColorPickerButton( _controller, false),
-        ColorPickerButton( _controller, true),
+        Flexible(child: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+          return Container(
+              child: Slider(
+            value: _controller.thickness,
+            onChanged: (value) => setState(() {
+                  _controller.thickness = value;
+                }),
+            min: 1.0,
+            max: 20.0,
+            activeColor: Colors.white,
+          ));
+        })),
+        ColorPickerButton(_controller, false),
+        ColorPickerButton(_controller, true),
       ],
     );
   }
 }
 
 class ColorPickerButton extends StatefulWidget {
-
   final PainterController _controller;
   final bool _background;
 
@@ -168,18 +154,19 @@ class _ColorPickerButtonState extends State<ColorPickerButton> {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(_iconData,color: _color),
-      tooltip: widget._background ? 'Change background color' : 'Change draw color',
+      icon: Icon(_iconData, color: _color),
+      tooltip:
+          widget._background ? 'Change background color' : 'Change draw color',
       onPressed: () => _pickColor(),
     );
   }
 
-  void _pickColor(){
-    Color pickerColor=_color;
-    Navigator.of(context).push(
-        MaterialPageRoute(
+  void _pickColor() {
+    Color pickerColor = _color;
+    Navigator.of(context)
+        .push(MaterialPageRoute(
             fullscreenDialog: true,
-            builder: (BuildContext context){
+            builder: (BuildContext context) {
               return Scaffold(
                   appBar: AppBar(
                     title: Text('Pick color'),
@@ -188,30 +175,28 @@ class _ColorPickerButtonState extends State<ColorPickerButton> {
                       alignment: Alignment.center,
                       child: ColorPicker(
                         pickerColor: pickerColor,
-                        onColorChanged: (Color c)=>pickerColor=c,
-                      )
-                  )
-              );
-            }
-        )
-    ).then((_){
-      setState((){
+                        onColorChanged: (Color c) => pickerColor = c,
+                      )));
+            }))
+        .then((_) {
+      setState(() {
         _color = pickerColor;
       });
     });
   }
 
-  Color get _color=>widget._background ? widget._controller.backgroundColor : widget._controller.drawColor;
+  Color get _color => widget._background
+      ? widget._controller.backgroundColor
+      : widget._controller.drawColor;
 
-  IconData get _iconData => widget._background ? Icons.format_color_fill : Icons.brush;
+  IconData get _iconData =>
+      widget._background ? Icons.format_color_fill : Icons.brush;
 
-  set _color(Color color){
-    if(widget._background){
+  set _color(Color color) {
+    if (widget._background) {
       widget._controller.backgroundColor = color;
     } else {
       widget._controller.drawColor = color;
     }
   }
 }
-
-

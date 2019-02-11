@@ -20,62 +20,48 @@ class Painter extends StatefulWidget {
 
 class _PainterState extends State<Painter> {
   final GlobalKey _globalKey = GlobalKey();
-  bool _finished;
 
   @override
   void initState() {
     super.initState();
-    _finished = false;
-    widget.painterController._widgetFinish = _finish;
     widget.painterController._globalKey = _globalKey;
-  }
-
-  Size _finish(){
-    setState((){
-      _finished = true;
-    });
-    return context.size;
   }
 
   @override
   Widget build(BuildContext context) {
     Widget child = CustomPaint(
       willChange: true,
-      painter: _PainterPainter(
-          widget.painterController._pathHistory,
-          repaint: widget.painterController
-      ),
+      painter: _PainterPainter(widget.painterController._pathHistory,
+          repaint: widget.painterController),
     );
     child = ClipRect(child: child);
-    if(!_finished){
-      if(widget.painterController.backgroundImage == null) {
-        child = RepaintBoundary(
-          key: _globalKey,
-          child: GestureDetector(
-            child: child,
-            onPanStart: _onPanStart,
-            onPanUpdate: _onPanUpdate,
-            onPanEnd: _onPanEnd,
-          ),
-        );
-      } else {
-        child = RepaintBoundary(
-          key: _globalKey,
-          child: Stack(
-            alignment: FractionalOffset.center,
-            fit: StackFit.expand,
-            children: <Widget>[
-              widget.painterController.backgroundImage,
-              GestureDetector(
-                child: child,
-                onPanStart: _onPanStart,
-                onPanUpdate: _onPanUpdate,
-                onPanEnd: _onPanEnd,
-              )
-            ],
-          ),
-        );
-      }
+    if (widget.painterController.backgroundImage == null) {
+      child = RepaintBoundary(
+        key: _globalKey,
+        child: GestureDetector(
+          child: child,
+          onPanStart: _onPanStart,
+          onPanUpdate: _onPanUpdate,
+          onPanEnd: _onPanEnd,
+        ),
+      );
+    } else {
+      child = RepaintBoundary(
+        key: _globalKey,
+        child: Stack(
+          alignment: FractionalOffset.center,
+          fit: StackFit.expand,
+          children: <Widget>[
+            widget.painterController.backgroundImage,
+            GestureDetector(
+              child: child,
+              onPanStart: _onPanStart,
+              onPanUpdate: _onPanUpdate,
+              onPanEnd: _onPanEnd,
+            )
+          ],
+        ),
+      );
     }
     return Container(
       child: child,
@@ -84,33 +70,30 @@ class _PainterState extends State<Painter> {
     );
   }
 
-  void _onPanStart(DragStartDetails start){
+  void _onPanStart(DragStartDetails start) {
     Offset pos = (context.findRenderObject() as RenderBox)
         .globalToLocal(start.globalPosition);
     widget.painterController._pathHistory.add(pos);
     widget.painterController._notifyListeners();
   }
 
-  void _onPanUpdate(DragUpdateDetails update){
+  void _onPanUpdate(DragUpdateDetails update) {
     Offset pos = (context.findRenderObject() as RenderBox)
         .globalToLocal(update.globalPosition);
     widget.painterController._pathHistory.updateCurrent(pos);
     widget.painterController._notifyListeners();
   }
 
-  void _onPanEnd(DragEndDetails end){
+  void _onPanEnd(DragEndDetails end) {
     widget.painterController._pathHistory.endCurrent();
     widget.painterController._notifyListeners();
   }
 }
 
-class _PainterPainter extends CustomPainter{
+class _PainterPainter extends CustomPainter {
   final _PathHistory _path;
 
-  _PainterPainter(
-      this._path,
-      {Listenable repaint}
-  ) : super(repaint: repaint);
+  _PainterPainter(this._path, {Listenable repaint}) : super(repaint: repaint);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -119,7 +102,6 @@ class _PainterPainter extends CustomPainter{
 
   @override
   bool shouldRepaint(_PainterPainter oldDelegate) => true;
-
 }
 
 class _PathHistory {
@@ -129,7 +111,7 @@ class _PathHistory {
   Paint _backgroundPaint;
   bool _inDrag;
 
-  _PathHistory(){
+  _PathHistory() {
     _paths = List<MapEntry<Path, Paint>>();
     _undone = List<MapEntry<Path, Paint>>();
     _inDrag = false;
@@ -147,13 +129,13 @@ class _PathHistory {
   bool canRedo() => _undone.length > 0;
 
   void redo() {
-    if(!_inDrag && canRedo()) {
+    if (!_inDrag && canRedo()) {
       _paths.add(_undone.removeLast());
     }
   }
 
-  void clear(){
-    if(!_inDrag) {
+  void clear() {
+    if (!_inDrag) {
       _paths.clear();
       _undone.clear();
     }
@@ -161,8 +143,8 @@ class _PathHistory {
 
   set backgroundColor(color) => _backgroundPaint.color = color;
 
-  void add(Offset startPoint){
-    if(!_inDrag) {
+  void add(Offset startPoint) {
+    if (!_inDrag) {
       _inDrag = true;
       Path path = Path();
       path.moveTo(startPoint.dx, startPoint.dy);
@@ -181,22 +163,22 @@ class _PathHistory {
     _inDrag = false;
   }
 
-  void draw(Canvas canvas, Size size){
-    canvas.drawRect(Rect.fromLTWH(0.0, 0.0, size.width, size.height), _backgroundPaint);
-    for(MapEntry<Path, Paint> path in _paths){
+  void draw(Canvas canvas, Size size) {
+    canvas.drawRect(
+        Rect.fromLTWH(0.0, 0.0, size.width, size.height), _backgroundPaint);
+    for (MapEntry<Path, Paint> path in _paths) {
       canvas.drawPath(path.key, path.value);
     }
   }
 }
 
-class PainterController extends ChangeNotifier{
+class PainterController extends ChangeNotifier {
   Color _drawColor = Color.fromARGB(255, 0, 0, 0);
   Color _backgroundColor = Color.fromARGB(255, 255, 255, 255);
   mat.Image _bgimage;
 
   double _thickness = 1.0;
   _PathHistory _pathHistory;
-  ValueGetter<Size> _widgetFinish;
   GlobalKey _globalKey;
 
   PainterController() {
@@ -204,36 +186,36 @@ class PainterController extends ChangeNotifier{
   }
 
   Color get drawColor => _drawColor;
-  set drawColor(Color color){
+  set drawColor(Color color) {
     _drawColor = color;
     _updatePaint();
   }
 
   Color get backgroundColor => _backgroundColor;
-  set backgroundColor(Color color){
+  set backgroundColor(Color color) {
     _backgroundColor = color;
     _updatePaint();
   }
 
   mat.Image get backgroundImage => _bgimage;
-  set backgroundImage(mat.Image image){
+  set backgroundImage(mat.Image image) {
     _bgimage = image;
     _updatePaint();
   }
 
   double get thickness => _thickness;
-  set thickness(double t){
-    _thickness=t;
+  set thickness(double t) {
+    _thickness = t;
     _updatePaint();
   }
 
-  void _updatePaint(){
+  void _updatePaint() {
     Paint paint = Paint();
     paint.color = drawColor;
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = thickness;
     _pathHistory.currentPaint = paint;
-    if(_bgimage != null) {
+    if (_bgimage != null) {
       _pathHistory.backgroundColor = Color(0x00000000);
     } else {
       _pathHistory.backgroundColor = _backgroundColor;
@@ -241,12 +223,12 @@ class PainterController extends ChangeNotifier{
     notifyListeners();
   }
 
-  void undo(){
+  void undo() {
     _pathHistory.undo();
     notifyListeners();
   }
 
-  void redo(){
+  void redo() {
     _pathHistory.redo();
     notifyListeners();
   }
@@ -254,17 +236,18 @@ class PainterController extends ChangeNotifier{
   bool get canUndo => _pathHistory.canUndo();
   bool get canRedo => _pathHistory.canRedo();
 
-  void _notifyListeners(){
+  void _notifyListeners() {
     notifyListeners();
   }
 
-  void clear(){
+  void clear() {
     _pathHistory.clear();
     notifyListeners();
   }
 
   Future<Uint8List> exportAsPNGBytes() async {
-    RenderRepaintBoundary boundary = _globalKey.currentContext.findRenderObject();
+    RenderRepaintBoundary boundary =
+        _globalKey.currentContext.findRenderObject();
     Image image = await boundary.toImage();
     ByteData byteData = await image.toByteData(format: ImageByteFormat.png);
     return byteData.buffer.asUint8List();

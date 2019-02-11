@@ -1,3 +1,7 @@
+## 1.0.1
+
+* Removed unnecessary code
+
 ## 1.0.0
 
 * Added support to use background images (see the example project for more details)
