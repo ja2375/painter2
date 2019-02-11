@@ -35,6 +35,7 @@ class _ExamplePageState extends State<ExamplePage> {
     PainterController controller = PainterController();
     controller.thickness = 5.0;
     controller.backgroundColor = Colors.green;
+    controller.backgroundImage = Image.network('https://cdn-images-1.medium.com/max/1200/1*5-aoK8IBmXve5whBQM90GA.png');
     return controller;
   }
 
@@ -76,8 +77,25 @@ class _ExamplePageState extends State<ExamplePage> {
           onPressed: () => _controller.clear(),
         ),
         IconButton(
-            icon: new Icon(Icons.check),
-            onPressed: () => _show(_controller.finish(), context)
+            icon: Icon(Icons.check),
+            onPressed: () async {
+              setState(() {
+                _finished = true;
+              });
+              Uint8List bytes = await _controller.exportAsPNGBytes();
+              Navigator.of(context).push(
+                  MaterialPageRoute(builder: (BuildContext context){
+                    return Scaffold(
+                      appBar: AppBar(
+                        title: Text('View your image'),
+                      ),
+                      body: Container(
+                        child: Image.memory(bytes),
+                      ),
+                    );
+                  })
+              );
+            }
         ),
       ];
     }
@@ -96,49 +114,6 @@ class _ExamplePageState extends State<ExamplePage> {
               child: Painter(_controller)
           )
       ),
-    );
-  }
-
-  void _show(PictureDetails picture,BuildContext context){
-    setState(() {
-      _finished=true;
-    });
-    Navigator.of(context).push(
-        MaterialPageRoute(builder: (BuildContext context){
-          return Scaffold(
-            appBar: AppBar(
-              title: Text('View your image'),
-            ),
-            body: Container(
-                alignment: Alignment.center,
-                child: FutureBuilder<Uint8List>(
-                  future: picture.toPNG(),
-                  builder: (BuildContext context, AsyncSnapshot<Uint8List> snapshot){
-                    switch (snapshot.connectionState) {
-                      case ConnectionState.done:
-                        if (snapshot.hasError){
-                          return Text('Error: ${snapshot.error}');
-                        }else{
-                          return Image.memory(snapshot.data);
-                        }
-                        break;
-                      default:
-                        return Container(
-                            child: FractionallySizedBox(
-                              widthFactor: 0.1,
-                              child: AspectRatio(
-                                  aspectRatio: 1.0,
-                                  child: CircularProgressIndicator()
-                              ),
-                              alignment: Alignment.center,
-                            )
-                        );
-                    }
-                  },
-                )
-            ),
-          );
-        })
     );
   }
 }

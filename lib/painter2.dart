@@ -1,5 +1,7 @@
 library painter;
 
+import 'package:flutter/material.dart' as mat show Image;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart' hide Image;
 import 'dart:ui';
 import 'dart:async';
@@ -8,8 +10,8 @@ import 'dart:typed_data';
 class Painter extends StatefulWidget {
   final PainterController painterController;
 
-  Painter(PainterController painterController):
-        this.painterController = painterController,
+  Painter(PainterController painterController)
+      : this.painterController = painterController,
         super(key: ValueKey<PainterController>(painterController));
 
   @override
@@ -17,6 +19,7 @@ class Painter extends StatefulWidget {
 }
 
 class _PainterState extends State<Painter> {
+  final GlobalKey _globalKey = GlobalKey();
   bool _finished;
 
   @override
@@ -24,6 +27,7 @@ class _PainterState extends State<Painter> {
     super.initState();
     _finished = false;
     widget.painterController._widgetFinish = _finish;
+    widget.painterController._globalKey = _globalKey;
   }
 
   Size _finish(){
@@ -44,12 +48,34 @@ class _PainterState extends State<Painter> {
     );
     child = ClipRect(child: child);
     if(!_finished){
-      child = GestureDetector(
-        child: child,
-        onPanStart: _onPanStart,
-        onPanUpdate: _onPanUpdate,
-        onPanEnd: _onPanEnd,
-      );
+      if(widget.painterController.backgroundImage == null) {
+        child = RepaintBoundary(
+          key: _globalKey,
+          child: GestureDetector(
+            child: child,
+            onPanStart: _onPanStart,
+            onPanUpdate: _onPanUpdate,
+            onPanEnd: _onPanEnd,
+          ),
+        );
+      } else {
+        child = RepaintBoundary(
+          key: _globalKey,
+          child: Stack(
+            alignment: FractionalOffset.center,
+            fit: StackFit.expand,
+            children: <Widget>[
+              widget.painterController.backgroundImage,
+              GestureDetector(
+                child: child,
+                onPanStart: _onPanStart,
+                onPanUpdate: _onPanUpdate,
+                onPanEnd: _onPanEnd,
+              )
+            ],
+          ),
+        );
+      }
     }
     return Container(
       child: child,
@@ -76,7 +102,6 @@ class _PainterState extends State<Painter> {
     widget.painterController._pathHistory.endCurrent();
     widget.painterController._notifyListeners();
   }
-
 }
 
 class _PainterPainter extends CustomPainter{
@@ -111,10 +136,6 @@ class _PathHistory {
     _backgroundPaint = Paint();
   }
 
-  void setBackgroundColor(Color backgroundColor){
-    _backgroundPaint.color = backgroundColor;
-  }
-
   bool canUndo() => _paths.length > 0;
 
   void undo() {
@@ -138,6 +159,8 @@ class _PathHistory {
     }
   }
 
+  set backgroundColor(color) => _backgroundPaint.color = color;
+
   void add(Offset startPoint){
     if(!_inDrag) {
       _inDrag = true;
@@ -158,40 +181,23 @@ class _PathHistory {
     _inDrag = false;
   }
 
-  void draw(Canvas canvas,Size size){
+  void draw(Canvas canvas, Size size){
     canvas.drawRect(Rect.fromLTWH(0.0, 0.0, size.width, size.height), _backgroundPaint);
     for(MapEntry<Path, Paint> path in _paths){
-      canvas.drawPath(path.key,path.value);
+      canvas.drawPath(path.key, path.value);
     }
-  }
-}
-
-typedef PictureDetails PictureCallback();
-
-class PictureDetails{
-  final Picture picture;
-  final int width;
-  final int height;
-
-  const PictureDetails(this.picture, this.width, this.height);
-
-  Future<Image> toImage() async {
-    return await picture.toImage(width, height);
-  }
-
-  Future<Uint8List> toPNG() async{
-    return (await (await toImage()).toByteData(format: ImageByteFormat.png)).buffer.asUint8List();
   }
 }
 
 class PainterController extends ChangeNotifier{
   Color _drawColor = Color.fromARGB(255, 0, 0, 0);
   Color _backgroundColor = Color.fromARGB(255, 255, 255, 255);
+  mat.Image _bgimage;
 
   double _thickness = 1.0;
-  PictureDetails _cached;
   _PathHistory _pathHistory;
   ValueGetter<Size> _widgetFinish;
+  GlobalKey _globalKey;
 
   PainterController() {
     _pathHistory = _PathHistory();
@@ -205,7 +211,13 @@ class PainterController extends ChangeNotifier{
 
   Color get backgroundColor => _backgroundColor;
   set backgroundColor(Color color){
-    _backgroundColor=color;
+    _backgroundColor = color;
+    _updatePaint();
+  }
+
+  mat.Image get backgroundImage => _bgimage;
+  set backgroundImage(mat.Image image){
+    _bgimage = image;
     _updatePaint();
   }
 
@@ -221,22 +233,22 @@ class PainterController extends ChangeNotifier{
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = thickness;
     _pathHistory.currentPaint = paint;
-    _pathHistory.setBackgroundColor(backgroundColor);
+    if(_bgimage != null) {
+      _pathHistory.backgroundColor = Color(0x00000000);
+    } else {
+      _pathHistory.backgroundColor = _backgroundColor;
+    }
     notifyListeners();
   }
 
   void undo(){
-    if(!isFinished) {
-      _pathHistory.undo();
-      notifyListeners();
-    }
+    _pathHistory.undo();
+    notifyListeners();
   }
 
   void redo(){
-    if(!isFinished) {
-      _pathHistory.redo();
-      notifyListeners();
-    }
+    _pathHistory.redo();
+    notifyListeners();
   }
 
   bool get canUndo => _pathHistory.canUndo();
@@ -247,25 +259,14 @@ class PainterController extends ChangeNotifier{
   }
 
   void clear(){
-    if(!isFinished) {
-      _pathHistory.clear();
-      notifyListeners();
-    }
+    _pathHistory.clear();
+    notifyListeners();
   }
 
-  PictureDetails finish(){
-    if(!isFinished){
-      _cached = _render(_widgetFinish());
-    }
-    return _cached;
+  Future<Uint8List> exportAsPNGBytes() async {
+    RenderRepaintBoundary boundary = _globalKey.currentContext.findRenderObject();
+    Image image = await boundary.toImage();
+    ByteData byteData = await image.toByteData(format: ImageByteFormat.png);
+    return byteData.buffer.asUint8List();
   }
-
-  PictureDetails _render(Size size){
-    PictureRecorder recorder = PictureRecorder();
-    Canvas canvas = Canvas(recorder);
-    _pathHistory.draw(canvas, size);
-    return PictureDetails(recorder.endRecording(),size.width.floor(),size.height.floor());
-  }
-
-  bool get isFinished => _cached != null;
 }
