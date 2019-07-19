@@ -110,6 +110,12 @@ class _PathHistory {
   Paint currentPaint;
   Paint _backgroundPaint;
   bool _inDrag;
+  double _startX; //start X with a tap
+  double _startY; //start Y with a tap
+  bool _startFlag = false;
+  bool _erase = false;
+  double _eraseArea = 1.0;
+  bool _pathFound = false;
 
   _PathHistory() {
     _paths = List<MapEntry<Path, Paint>>();
@@ -119,6 +125,15 @@ class _PathHistory {
   }
 
   bool canUndo() => _paths.length > 0;
+
+  bool get erase => _erase;
+  set erase(bool e) {
+    _erase = e;
+  }
+
+  set eraseArea(double r) {
+    _eraseArea = r;
+  }
 
   void undo() {
     if (!_inDrag && canUndo()) {
@@ -148,18 +163,48 @@ class _PathHistory {
       _inDrag = true;
       Path path = Path();
       path.moveTo(startPoint.dx, startPoint.dy);
+      _startX = startPoint.dx;
+      _startY = startPoint.dy;
+      _startFlag = true;
       _paths.add(MapEntry<Path, Paint>(path, currentPaint));
     }
   }
 
   void updateCurrent(Offset nextPoint) {
     if (_inDrag) {
-      Path path = _paths.last.key;
-      path.lineTo(nextPoint.dx, nextPoint.dy);
+      _pathFound = false;
+      if (!_erase) {
+        Path path = _paths.last.key;
+        path.lineTo(nextPoint.dx, nextPoint.dy);
+        _startFlag = false;
+      } else {
+        for (int i=0; i<_paths.length; i++) {
+          _pathFound = false;
+          for (double x = nextPoint.dx - _eraseArea; x <= nextPoint.dx + _eraseArea; x++) {
+            for (double y = nextPoint.dy - _eraseArea; y <= nextPoint.dy + _eraseArea; y++) {
+              if (_paths[i].key.contains(new Offset(x, y)))
+              {
+                _undone.add(_paths.removeAt(i));
+                i--;
+                _pathFound = true;
+                break;
+              }
+            }
+            if (_pathFound) {
+              break;
+            }
+          }
+        }
+      }
     }
   }
 
   void endCurrent() {
+    Path path = _paths.last.key;
+    if ((_startFlag) && (!_erase)) { //if it was just a tap, draw a point and reset a flag
+      path.addOval(Rect.fromCircle(center: new Offset(_startX, _startY), radius: 1.0));
+      _startFlag = false;
+    }
     _inDrag = false;
   }
 
@@ -178,6 +223,7 @@ class PainterController extends ChangeNotifier {
   mat.Image _bgimage;
 
   double _thickness = 1.0;
+  double _erasethickness = 1.0;
   _PathHistory _pathHistory;
   GlobalKey _globalKey;
 
@@ -206,6 +252,20 @@ class PainterController extends ChangeNotifier {
   double get thickness => _thickness;
   set thickness(double t) {
     _thickness = t;
+    _updatePaint();
+  }
+
+  double get erasethickness => _erasethickness;
+  set erasethickness(double t) {
+    _erasethickness = t;
+    _pathHistory._eraseArea = t;
+    _updatePaint();
+  }
+
+  bool get eraser => _pathHistory.erase; //setter / getter for eraser
+  set eraser(bool e) {
+    _pathHistory.erase = e;
+    _pathHistory._eraseArea =  _erasethickness;
     _updatePaint();
   }
 
